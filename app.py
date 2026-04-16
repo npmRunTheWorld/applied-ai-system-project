@@ -12,6 +12,7 @@ from logic_utils import (
     update_score,
     guess_volatility,
 )
+from ai_coach import get_coach_hint
 
 HINT_MESSAGES = {
     "Too High": ("📉 Too High — Go Lower", "warning"),
@@ -350,6 +351,49 @@ with bot_left:
                 st.session_state.score_history.append(st.session_state.score)
                 st.rerun()
 
+    # ── AI Coach ──────────────────────────────────────────────────────────────
+    if st.session_state.status == "playing":
+        st.markdown("---")
+        with st.expander("🤖 Ask AI Coach", expanded=False):
+            st.caption(
+                "The coach analyses your guesses and suggests the mathematically optimal "
+                "next number using binary search strategy."
+            )
+            if st.button("Get Coach Hint", key="coach_btn", use_container_width=True):
+                with st.spinner("Coach thinking…"):
+                    hint = get_coach_hint(
+                        low=low,
+                        high=high,
+                        attempts_used=st.session_state.attempts,
+                        attempt_limit=attempt_limit,
+                        history=st.session_state.history,
+                        outcomes=st.session_state.history_outcomes,
+                    )
+                st.session_state["_coach_hint"] = hint
+
+            if "_coach_hint" in st.session_state:
+                h = st.session_state["_coach_hint"]
+                if h.get("suggestion") is not None:
+                    st.markdown(
+                        f'<div style="background:rgba(255,255,255,0.06);border-radius:8px;'
+                        f'padding:10px 14px;margin-top:6px;">'
+                        f'<div style="font-size:0.75rem;color:#aaa;margin-bottom:2px;">Recommended guess</div>'
+                        f'<div style="font-size:2rem;font-weight:700;color:#748FFC;">{h["suggestion"]}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                conf_pct = int(h.get("confidence", 0) * 100)
+                conf_color = "#2CA02C" if conf_pct > 60 else ("#FFA500" if conf_pct > 30 else "#D62728")
+                st.markdown(
+                    f'<div style="font-size:0.8rem;color:{conf_color};margin-top:4px;">'
+                    f'Confidence: {conf_pct}%</div>',
+                    unsafe_allow_html=True,
+                )
+                if h.get("strategy_tip"):
+                    st.info(h["strategy_tip"])
+                if h.get("reasoning"):
+                    st.caption(h["reasoning"])
+
     # New Game button sits below the guess form
     if st.button("New Game", use_container_width=True):
         for k, v in defaults.items():
@@ -357,6 +401,7 @@ with bot_left:
         st.session_state.game_id += 1
         st.session_state.secret = random.randint(low, high)
         st.session_state.start_time = time.time()
+        st.session_state.pop("_coach_hint", None)
         st.rerun()
 
 with bot_right:

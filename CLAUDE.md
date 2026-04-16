@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Input Files
+
+All user-provided instruction files live in **`.claude/inputs/`** inside the project root (e.g. `.claude/inputs/STEPS.md`). Read from there at the start of any session where the user says "instructions are in inputs.<FILE>".
+
 ## Commands
 
 ```bash

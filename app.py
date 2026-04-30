@@ -13,6 +13,7 @@ from logic_utils import (
     guess_volatility,
 )
 from ai_coach import get_coach_hint
+import leaderboard as lb
 
 HINT_MESSAGES = {
     "Too High": ("📉 Too High — Go Lower", "warning"),
@@ -143,6 +144,21 @@ st.sidebar.caption("Range"); st.sidebar.markdown(f"**{low} — {high}**")
 st.sidebar.caption("Max Attempts"); st.sidebar.markdown(f"**{attempt_limit}**")
 
 st.sidebar.divider()
+st.sidebar.markdown("**Player**")
+if st.session_state.username_locked:
+    st.sidebar.markdown(f"**{st.session_state.username}**")
+    st.sidebar.caption("Locked after first win")
+else:
+    _new_name = st.sidebar.text_input(
+        "Username",
+        value=st.session_state.username,
+        max_chars=20,
+        help="Set your name before your first win — it locks in after that.",
+    )
+    if _new_name and _new_name != st.session_state.username:
+        st.session_state.username = _new_name
+
+st.sidebar.divider()
 _user_key = st.sidebar.text_input(
     "Anthropic API Key",
     type="password",
@@ -150,6 +166,12 @@ _user_key = st.sidebar.text_input(
     help="Your key is used only for this session and never stored.",
     key="user_api_key",
 )
+with st.sidebar.expander("How to get an API key"):
+    st.markdown(
+        "1. Go to [console.anthropic.com](https://console.anthropic.com) and sign in\n"
+        "2. Navigate to **API Keys** → **Create Key**\n"
+        "3. Copy the key and paste it above"
+    )
 
 # ── Session state ─────────────────────────────────────────────────────────────
 defaults = {
@@ -158,6 +180,8 @@ defaults = {
     "history": [], "history_outcomes": [], "game_id": 0, "last_hint": None,
     "start_time": time.time(), "score_delta": None,
     "score_history": [100],
+    "username": lb.generate_random_name(),
+    "username_locked": False,
 }
 for k, v in defaults.items():
     if k not in st.session_state:

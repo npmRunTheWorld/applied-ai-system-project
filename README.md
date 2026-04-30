@@ -220,7 +220,7 @@ The most surprising finding was that Claude consistently requested all three too
 
 ## Loom Video Walkthrough
 
-> **[Add your Loom link here]**
+https://www.loom.com/share/36b7190245cd461dbc00f1e93a8d0402
 
 The walkthrough demonstrates:
 - End-to-end game run (Easy, Normal, Hard difficulties)

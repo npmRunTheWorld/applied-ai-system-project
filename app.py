@@ -370,247 +370,273 @@ console.log('[DEBUG] Game State:', {_dbg});
 </script>
 """, height=0)
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.title("🎮 Glitch Guesser")
+# ── Tabs ──────────────────────────────────────────────────────────────────────
+tab_game, tab_board = st.tabs(["🎮 Game", "🏆 Leaderboard"])
 
-# ── Win / Loss banner ─────────────────────────────────────────────────────────
-if st.session_state.status == "won":
-    st.success(f"🏆 Won! Secret: **{st.session_state.secret}** · {elapsed}s · Score: **{st.session_state.score}**")
-elif st.session_state.status == "lost":
-    st.error(f"💀 Out of attempts! Secret was **{st.session_state.secret}**. Score: **{st.session_state.score}**")
+with tab_game:
+    # ── Header ────────────────────────────────────────────────────────────────
+    st.title("🎮 Glitch Guesser")
 
-# ── TOP SECTION: stats (15%) | GV + chart (85%) ───────────────────────────────
-top_stats, top_main = st.columns([15, 85])
+    # ── Win / Loss banner ─────────────────────────────────────────────────────
+    if st.session_state.status == "won":
+        st.success(f"🏆 Won! Secret: **{st.session_state.secret}** · {elapsed}s · Score: **{st.session_state.score}**")
+    elif st.session_state.status == "lost":
+        st.error(f"💀 Out of attempts! Secret was **{st.session_state.secret}**. Score: **{st.session_state.score}**")
 
-with top_stats:
-    st.metric("Score", st.session_state.score,
-              delta=st.session_state.score_delta, delta_color="normal")
-    st.metric("Attempts", f"{st.session_state.attempts} / {attempt_limit}")
-    st.markdown(
-        f'<div style="padding:4px 0 8px 0;">'
-        f'<div style="font-size:0.75rem;color:{t["muted"]};margin-bottom:2px;letter-spacing:0.08em;">TIME</div>'
-        f'<div id="live-time" style="font-size:1.75rem;font-weight:700;color:{t["accent"]};font-family:\'{t["font_body"]}\',monospace;text-shadow:0 0 10px {t["accent"]}80;">{elapsed}s</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
+    # ── TOP SECTION: stats (15%) | GV + chart (85%) ───────────────────────────
+    top_stats, top_main = st.columns([15, 85])
 
-with top_main:
-    # GV info box
-    gv_color_val = gv_color(gv_now)
-    st.markdown(
-        f'<div title="{GV_TOOLTIP}" style="background:{t["card_bg"]};'
-        f'border:1px solid {t["border"]};border-radius:4px;padding:8px 12px;cursor:help;margin-bottom:8px;">'
-        f'<span style="font-size:0.7rem;color:{t["muted"]};letter-spacing:0.1em;">GUESS VOLATILITY (?)</span><br>'
-        f'<span id="live-gv-value" style="font-size:1.4rem;font-weight:700;color:{gv_color_val};font-family:\'{t["font_body"]}\',monospace;">+{gv_now}</span>'
-        f'<span style="font-size:0.8rem;color:{t["muted"]};"> pts if you win now</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
+    with top_stats:
+        st.metric("Score", st.session_state.score,
+                  delta=st.session_state.score_delta, delta_color="normal")
+        st.metric("Attempts", f"{st.session_state.attempts} / {attempt_limit}")
+        st.markdown(
+            f'<div style="padding:4px 0 8px 0;">'
+            f'<div style="font-size:0.75rem;color:{t["muted"]};margin-bottom:2px;letter-spacing:0.08em;">TIME</div>'
+            f'<div id="live-time" style="font-size:1.75rem;font-weight:700;color:{t["accent"]};font-family:\'{t["font_body"]}\',monospace;text-shadow:0 0 10px {t["accent"]}80;">{elapsed}s</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
-    # Score projection chart — show from game start (even before first guess)
-    hist = st.session_state.score_history
-    if len(hist) >= 1:
-        n = len(hist) - 1
-        current_score = hist[-1]
+    with top_main:
+        # GV info box
+        gv_color_val = gv_color(gv_now)
+        st.markdown(
+            f'<div title="{GV_TOOLTIP}" style="background:{t["card_bg"]};'
+            f'border:1px solid {t["border"]};border-radius:4px;padding:8px 12px;cursor:help;margin-bottom:8px;">'
+            f'<span style="font-size:0.7rem;color:{t["muted"]};letter-spacing:0.1em;">GUESS VOLATILITY (?)</span><br>'
+            f'<span id="live-gv-value" style="font-size:1.4rem;font-weight:700;color:{gv_color_val};font-family:\'{t["font_body"]}\',monospace;">+{gv_now}</span>'
+            f'<span style="font-size:0.8rem;color:{t["muted"]};"> pts if you win now</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
-        actual_df = pd.DataFrame({
-            "attempt": list(range(len(hist))),
-            "score":   hist,
-            "series":  "Score",
-        })
+        # Score projection chart — show from game start (even before first guess)
+        hist = st.session_state.score_history
+        if len(hist) >= 1:
+            n = len(hist) - 1
+            current_score = hist[-1]
 
-        if st.session_state.status == "playing":
-            win_score  = current_score + gv_now
-            lose_score = max(0, current_score - penalty)
-            proj_df = pd.DataFrame({
-                "attempt": [n, n + 1, n, n + 1],
-                "score":   [current_score, win_score, current_score, lose_score],
-                "series":  ["Win ▲", "Win ▲", "Lose ▼", "Lose ▼"],
+            actual_df = pd.DataFrame({
+                "attempt": list(range(len(hist))),
+                "score":   hist,
+                "series":  "Score",
             })
-            chart_df = pd.concat([actual_df, proj_df], ignore_index=True)
-        else:
-            chart_df = actual_df
 
-        color_scale = alt.Scale(
-            domain=["Score", "Win ▲", "Lose ▼"],
-            range=[t["chart_score"], t["chart_win"], t["chart_lose"]],
-        )
-
-        base = (
-            alt.Chart(chart_df)
-            .mark_line(point=True, strokeWidth=2)
-            .encode(
-                x=alt.X("attempt:Q", title=None, axis=alt.Axis(tickMinStep=1, labelColor=t["muted"], gridColor=t["border"])),
-                y=alt.Y("score:Q", title=None,
-                        scale=alt.Scale(domain=[0, max(130, current_score + gv_now + 20)]),
-                        axis=alt.Axis(labelColor=t["muted"], gridColor=t["border"])),
-                color=alt.Color("series:N", scale=color_scale,
-                                legend=alt.Legend(title=None, labelColor=t["text"])),
-                strokeDash=alt.condition(
-                    alt.datum.series == "Score",
-                    alt.value([1, 0]), alt.value([5, 3])
-                ),
-                tooltip=[
-                    alt.Tooltip("attempt:Q", title="Attempt"),
-                    alt.Tooltip("score:Q",   title="Score"),
-                    alt.Tooltip("series:N",  title="Series"),
-                ],
-            )
-            .properties(height=160)
-        )
-
-        # GV label at the Win ▲ tip + score label at Lose ▼ tip
-        if st.session_state.status == "playing":
-            base = (
-                base
-                + _make_label_chart(n + 1, win_score,  f"+{gv_now} GV",     gv_color(gv_now), dy=-6)
-                + _make_label_chart(n + 1, lose_score, f"{lose_score} pts", t["chart_lose"], dy=8)
-            )
-
-        chart = base.properties(background="transparent").configure_view(strokeOpacity=0)
-
-        st.altair_chart(chart, use_container_width=True)
-
-st.divider()
-
-# ── Show Hints toggle + hint feedback ─────────────────────────────────────────
-show_hints = st.checkbox("Show Hints", value=True, key="show_hints")
-if show_hints and st.session_state.last_hint:
-    label, kind = HINT_MESSAGES[st.session_state.last_hint]
-    {"success": st.success, "warning": st.warning, "info": st.info}[kind](label)
-
-# ── BOTTOM SECTION: guess form (left) | history (right) ──────────────────────
-bot_left, bot_right = st.columns([1, 1], gap="medium")
-
-with bot_left:
-    if st.session_state.status == "playing":
-        with st.form("guess_form"):
-            raw_guess = st.text_input(
-                f"Guess ({low}–{high})",
-                placeholder=f"{low}–{high}",
-                key=f"gi_{difficulty}_{st.session_state.game_id}",
-            )
-            submit = st.form_submit_button(
-                "Submit Guess", use_container_width=True, type="primary"
-            )
-
-        if submit:
-            ok, guess_val, err = parse_guess(raw_guess)
-            if not ok:
-                st.error(err)
-            elif guess_val < low or guess_val > high:
-                st.error(f"⚠️ Must be between {low} and {high}. No attempt used.")
+            if st.session_state.status == "playing":
+                win_score  = current_score + gv_now
+                lose_score = max(0, current_score - penalty)
+                proj_df = pd.DataFrame({
+                    "attempt": [n, n + 1, n, n + 1],
+                    "score":   [current_score, win_score, current_score, lose_score],
+                    "series":  ["Win ▲", "Win ▲", "Lose ▼", "Lose ▼"],
+                })
+                chart_df = pd.concat([actual_df, proj_df], ignore_index=True)
             else:
-                st.session_state.attempts += 1
-                outcome = check_guess(guess_val, st.session_state.secret)
-                st.session_state.history.append(guess_val)
-                st.session_state.history_outcomes.append(outcome)
-                st.session_state.last_hint = outcome
-                prev = st.session_state.score
+                chart_df = actual_df
 
-                if outcome == "Win":
-                    gv = guess_volatility(
-                        st.session_state.attempts, attempt_limit,
-                        int(time.time() - st.session_state.start_time)
-                    )
-                    st.session_state.score = update_score(prev, outcome, penalty) + gv
-                    st.session_state.score_delta = gv if gv > 0 else None
-                    st.balloons()
-                    st.session_state.status = "won"
-                else:
-                    st.session_state.score = update_score(prev, outcome, penalty)
-                    st.session_state.score_delta = -penalty
-                    if st.session_state.attempts >= attempt_limit:
-                        st.session_state.score = 0  # absorb remainder from integer division
-                        st.session_state.status = "lost"
-
-                st.session_state.score_history.append(st.session_state.score)
-                st.rerun()
-
-    # ── AI Coach ──────────────────────────────────────────────────────────────
-    if st.session_state.status == "playing":
-        st.markdown("---")
-        with st.expander("🤖 Ask AI Coach", expanded=False):
-            st.caption(
-                "The coach analyses your guesses and suggests the mathematically optimal "
-                "next number using binary search strategy."
+            color_scale = alt.Scale(
+                domain=["Score", "Win ▲", "Lose ▼"],
+                range=[t["chart_score"], t["chart_win"], t["chart_lose"]],
             )
-            if st.button("Get Coach Hint", key="coach_btn", use_container_width=True):
-                with st.spinner("Coach thinking…"):
-                    hint = get_coach_hint(
-                        low=low,
-                        high=high,
-                        attempts_used=st.session_state.attempts,
-                        attempt_limit=attempt_limit,
-                        history=st.session_state.history,
-                        outcomes=st.session_state.history_outcomes,
-                        api_key=st.session_state.get("user_api_key") or None,
-                    )
-                st.session_state["_coach_hint"] = hint
 
-            if "_coach_hint" in st.session_state:
-                h = st.session_state["_coach_hint"]
-                if h.get("suggestion") is not None:
+            base = (
+                alt.Chart(chart_df)
+                .mark_line(point=True, strokeWidth=2)
+                .encode(
+                    x=alt.X("attempt:Q", title=None, axis=alt.Axis(tickMinStep=1, labelColor=t["muted"], gridColor=t["border"])),
+                    y=alt.Y("score:Q", title=None,
+                            scale=alt.Scale(domain=[0, max(130, current_score + gv_now + 20)]),
+                            axis=alt.Axis(labelColor=t["muted"], gridColor=t["border"])),
+                    color=alt.Color("series:N", scale=color_scale,
+                                    legend=alt.Legend(title=None, labelColor=t["text"])),
+                    strokeDash=alt.condition(
+                        alt.datum.series == "Score",
+                        alt.value([1, 0]), alt.value([5, 3])
+                    ),
+                    tooltip=[
+                        alt.Tooltip("attempt:Q", title="Attempt"),
+                        alt.Tooltip("score:Q",   title="Score"),
+                        alt.Tooltip("series:N",  title="Series"),
+                    ],
+                )
+                .properties(height=160)
+            )
+
+            # GV label at the Win ▲ tip + score label at Lose ▼ tip
+            if st.session_state.status == "playing":
+                base = (
+                    base
+                    + _make_label_chart(n + 1, win_score,  f"+{gv_now} GV",     gv_color(gv_now), dy=-6)
+                    + _make_label_chart(n + 1, lose_score, f"{lose_score} pts", t["chart_lose"], dy=8)
+                )
+
+            chart = base.properties(background="transparent").configure_view(strokeOpacity=0)
+
+            st.altair_chart(chart, use_container_width=True)
+
+    st.divider()
+
+    # ── Show Hints toggle + hint feedback ─────────────────────────────────────
+    show_hints = st.checkbox("Show Hints", value=True, key="show_hints")
+    if show_hints and st.session_state.last_hint:
+        label, kind = HINT_MESSAGES[st.session_state.last_hint]
+        {"success": st.success, "warning": st.warning, "info": st.info}[kind](label)
+
+    # ── BOTTOM SECTION: guess form (left) | history (right) ──────────────────
+    bot_left, bot_right = st.columns([1, 1], gap="medium")
+
+    with bot_left:
+        if st.session_state.status == "playing":
+            with st.form("guess_form"):
+                raw_guess = st.text_input(
+                    f"Guess ({low}–{high})",
+                    placeholder=f"{low}–{high}",
+                    key=f"gi_{difficulty}_{st.session_state.game_id}",
+                )
+                submit = st.form_submit_button(
+                    "Submit Guess", use_container_width=True, type="primary"
+                )
+
+            if submit:
+                ok, guess_val, err = parse_guess(raw_guess)
+                if not ok:
+                    st.error(err)
+                elif guess_val < low or guess_val > high:
+                    st.error(f"⚠️ Must be between {low} and {high}. No attempt used.")
+                else:
+                    st.session_state.attempts += 1
+                    outcome = check_guess(guess_val, st.session_state.secret)
+                    st.session_state.history.append(guess_val)
+                    st.session_state.history_outcomes.append(outcome)
+                    st.session_state.last_hint = outcome
+                    prev = st.session_state.score
+
+                    if outcome == "Win":
+                        gv = guess_volatility(
+                            st.session_state.attempts, attempt_limit,
+                            int(time.time() - st.session_state.start_time)
+                        )
+                        st.session_state.score = update_score(prev, outcome, penalty) + gv
+                        st.session_state.score_delta = gv if gv > 0 else None
+                        st.balloons()
+                        st.session_state.status = "won"
+                    else:
+                        st.session_state.score = update_score(prev, outcome, penalty)
+                        st.session_state.score_delta = -penalty
+                        if st.session_state.attempts >= attempt_limit:
+                            st.session_state.score = 0  # absorb remainder from integer division
+                            st.session_state.status = "lost"
+
+                    st.session_state.score_history.append(st.session_state.score)
+                    st.rerun()
+
+        # ── AI Coach ──────────────────────────────────────────────────────────
+        if st.session_state.status == "playing":
+            st.markdown("---")
+            with st.expander("🤖 Ask AI Coach", expanded=False):
+                st.caption(
+                    "The coach analyses your guesses and suggests the mathematically optimal "
+                    "next number using binary search strategy."
+                )
+                if st.button("Get Coach Hint", key="coach_btn", use_container_width=True):
+                    with st.spinner("Coach thinking…"):
+                        hint = get_coach_hint(
+                            low=low,
+                            high=high,
+                            attempts_used=st.session_state.attempts,
+                            attempt_limit=attempt_limit,
+                            history=st.session_state.history,
+                            outcomes=st.session_state.history_outcomes,
+                            api_key=st.session_state.get("user_api_key") or None,
+                        )
+                    st.session_state["_coach_hint"] = hint
+
+                if "_coach_hint" in st.session_state:
+                    h = st.session_state["_coach_hint"]
+                    if h.get("suggestion") is not None:
+                        st.markdown(
+                            f'<div style="background:{t["card_bg"]};border:1px solid {t["border"]};border-radius:4px;'
+                            f'padding:10px 14px;margin-top:6px;">'
+                            f'<div style="font-size:0.7rem;color:{t["muted"]};letter-spacing:0.1em;margin-bottom:4px;">RECOMMENDED GUESS</div>'
+                            f'<div style="font-size:2.2rem;font-weight:700;color:{t["accent"]};font-family:\'{t["font_body"]}\',monospace;text-shadow:0 0 12px {t["accent"]}80;">{h["suggestion"]}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+                    conf_pct = int(h.get("confidence", 0) * 100)
+                    conf_color = t["gv_high"] if conf_pct > 60 else (t["accent"] if conf_pct > 30 else t["gv_low"])
                     st.markdown(
-                        f'<div style="background:{t["card_bg"]};border:1px solid {t["border"]};border-radius:4px;'
-                        f'padding:10px 14px;margin-top:6px;">'
-                        f'<div style="font-size:0.7rem;color:{t["muted"]};letter-spacing:0.1em;margin-bottom:4px;">RECOMMENDED GUESS</div>'
-                        f'<div style="font-size:2.2rem;font-weight:700;color:{t["accent"]};font-family:\'{t["font_body"]}\',monospace;text-shadow:0 0 12px {t["accent"]}80;">{h["suggestion"]}</div>'
-                        f'</div>',
+                        f'<div style="font-size:0.8rem;color:{conf_color};margin-top:4px;">'
+                        f'Confidence: {conf_pct}%</div>',
                         unsafe_allow_html=True,
                     )
-                conf_pct = int(h.get("confidence", 0) * 100)
-                conf_color = t["gv_high"] if conf_pct > 60 else (t["accent"] if conf_pct > 30 else t["gv_low"])
-                st.markdown(
-                    f'<div style="font-size:0.8rem;color:{conf_color};margin-top:4px;">'
-                    f'Confidence: {conf_pct}%</div>',
-                    unsafe_allow_html=True,
-                )
-                if h.get("strategy_tip"):
-                    st.info(h["strategy_tip"])
-                if h.get("reasoning"):
-                    st.caption(h["reasoning"])
+                    if h.get("strategy_tip"):
+                        st.info(h["strategy_tip"])
+                    if h.get("reasoning"):
+                        st.caption(h["reasoning"])
 
-    # New Game button sits below the guess form
-    if st.button("New Game", use_container_width=True):
-        for k, v in defaults.items():
-            st.session_state[k] = v
-        st.session_state.game_id += 1
-        st.session_state.secret = random.randint(low, high)
-        st.session_state.start_time = time.time()
-        st.session_state.pop("_coach_hint", None)
-        st.rerun()
+        # New Game button sits below the guess form
+        if st.button("New Game", use_container_width=True):
+            for k, v in defaults.items():
+                st.session_state[k] = v
+            st.session_state.game_id += 1
+            st.session_state.secret = random.randint(low, high)
+            st.session_state.start_time = time.time()
+            st.session_state.pop("_coach_hint", None)
+            st.rerun()
 
-with bot_right:
-    st.subheader("History")
+    with bot_right:
+        st.subheader("History")
 
-    # Color legend
-    st.markdown(
-        f'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
-        f'<span style="font-size:0.7rem;background:{_hex_rgba(t["accent2"], 0.15)};color:{t["accent2"]};'
-        f'border:1px solid {t["accent2"]}66;border-radius:3px;padding:2px 8px;letter-spacing:0.06em;">▼ TOO LOW</span>'
-        f'<span style="font-size:0.7rem;background:{t["card_bg"]};color:{t["accent"]};'
-        f'border:1px solid {t["border"]};border-radius:3px;padding:2px 8px;letter-spacing:0.06em;">▲ TOO HIGH</span>'
-        f'<span style="font-size:0.7rem;background:{_hex_rgba(t["gv_high"], 0.1)};color:{t["gv_high"]};'
-        f'border:1px solid {t["gv_high"]}66;border-radius:3px;padding:2px 8px;letter-spacing:0.06em;">✓ CORRECT</span>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-
-    CHIP_COLORS = {
-        "Too Low":  (_hex_rgba(t["accent2"], 0.18),  t["accent2"]),
-        "Too High": (t["card_bg"],                   t["accent"]),
-        "Win":      (_hex_rgba(t["gv_high"], 0.15),  t["gv_high"]),
-    }
-    if st.session_state.history:
-        chips = " ".join(
-            '<span style="display:inline-block;border-radius:20px;padding:2px 10px;'
-            f'margin:2px;font-size:0.82rem;background:{CHIP_COLORS[o][0]};'
-            f'color:{CHIP_COLORS[o][1]};border:1px solid {CHIP_COLORS[o][1]}40;">'
-            f'{g}</span>'
-            for g, o in zip(st.session_state.history, st.session_state.history_outcomes)
+        # Color legend
+        st.markdown(
+            f'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
+            f'<span style="font-size:0.7rem;background:{_hex_rgba(t["accent2"], 0.15)};color:{t["accent2"]};'
+            f'border:1px solid {t["accent2"]}66;border-radius:3px;padding:2px 8px;letter-spacing:0.06em;">▼ TOO LOW</span>'
+            f'<span style="font-size:0.7rem;background:{t["card_bg"]};color:{t["accent"]};'
+            f'border:1px solid {t["border"]};border-radius:3px;padding:2px 8px;letter-spacing:0.06em;">▲ TOO HIGH</span>'
+            f'<span style="font-size:0.7rem;background:{_hex_rgba(t["gv_high"], 0.1)};color:{t["gv_high"]};'
+            f'border:1px solid {t["gv_high"]}66;border-radius:3px;padding:2px 8px;letter-spacing:0.06em;">✓ CORRECT</span>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
-        st.markdown(chips, unsafe_allow_html=True)
+
+        CHIP_COLORS = {
+            "Too Low":  (_hex_rgba(t["accent2"], 0.18),  t["accent2"]),
+            "Too High": (t["card_bg"],                   t["accent"]),
+            "Win":      (_hex_rgba(t["gv_high"], 0.15),  t["gv_high"]),
+        }
+        if st.session_state.history:
+            chips = " ".join(
+                '<span style="display:inline-block;border-radius:20px;padding:2px 10px;'
+                f'margin:2px;font-size:0.82rem;background:{CHIP_COLORS[o][0]};'
+                f'color:{CHIP_COLORS[o][1]};border:1px solid {CHIP_COLORS[o][1]}40;">'
+                f'{g}</span>'
+                for g, o in zip(st.session_state.history, st.session_state.history_outcomes)
+            )
+            st.markdown(chips, unsafe_allow_html=True)
+        else:
+            st.caption("No guesses yet.")
+
+with tab_board:
+    st.markdown("### 🏆 Top Players")
+    board = lb.get_leaderboard(limit=10)
+    current_user = st.session_state.get("username", "")
+
+    if not board:
+        st.caption("No scores yet — win a game to get on the board!")
     else:
-        st.caption("No guesses yet.")
+        rows = []
+        for i, entry in enumerate(board):
+            rows.append({
+                "Rank":       f"▶ #{i+1}" if entry["username"] == current_user else f"#{i+1}",
+                "Player":     entry["username"],
+                "Score":      entry["score"],
+                "Difficulty": entry["difficulty"],
+                "Attempts":   entry["attempts"],
+                "Date":       entry["date"],
+            })
+        df = pd.DataFrame(rows)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.caption(f"Showing top {len(board)} scores. Your row is marked ▶.")
 

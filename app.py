@@ -123,6 +123,12 @@ GV_TOOLTIP = (
 
 st.set_page_config(page_title="Glitch Guesser", page_icon="🎮", layout="centered")
 
+# Early init — sidebar reads these before the defaults dict runs
+if "username" not in st.session_state:
+    st.session_state.username = lb.generate_random_name()
+if "username_locked" not in st.session_state:
+    st.session_state.username_locked = False
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 difficulty = st.sidebar.selectbox("Difficulty", ["Easy", "Normal", "Hard"], index=1)
 attempt_limit_map = {"Easy": 6, "Normal": 8, "Hard": 5}

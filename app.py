@@ -380,6 +380,8 @@ with tab_game:
     # ── Win / Loss banner ─────────────────────────────────────────────────────
     if st.session_state.status == "won":
         st.success(f"🏆 Won! Secret: **{st.session_state.secret}** · {elapsed}s · Score: **{st.session_state.score}**")
+        if st.session_state.pop("_new_personal_best", False):
+            st.success("🌟 New personal best — score saved to leaderboard!")
     elif st.session_state.status == "lost":
         st.error(f"💀 Out of attempts! Secret was **{st.session_state.secret}**. Score: **{st.session_state.score}**")
 
@@ -521,6 +523,14 @@ with tab_game:
                         st.session_state.score_delta = gv if gv > 0 else None
                         st.balloons()
                         st.session_state.status = "won"
+                        st.session_state.username_locked = True
+                        is_best = lb.save_score(
+                            st.session_state.username,
+                            st.session_state.score,
+                            difficulty,
+                            st.session_state.attempts,
+                        )
+                        st.session_state["_new_personal_best"] = is_best
                     else:
                         st.session_state.score = update_score(prev, outcome, penalty)
                         st.session_state.score_delta = -penalty

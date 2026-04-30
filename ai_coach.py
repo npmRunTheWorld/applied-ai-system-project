@@ -15,6 +15,8 @@ import logging
 from pathlib import Path
 
 import anthropic
+from dotenv import load_dotenv
+load_dotenv()
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
 LOG_DIR = Path("logs")
@@ -157,6 +159,7 @@ def get_coach_hint(
     attempt_limit: int,
     history: list[int],
     outcomes: list[str],
+    api_key: str | None = None,
 ) -> dict:
     """
     Run the AI coach agentic loop and return a hint.
@@ -169,6 +172,7 @@ def get_coach_hint(
     """
     t0 = time.time()
     tool_results_store: dict = {}
+    client = anthropic.Anthropic(api_key=api_key) if api_key else _client
 
     system = (
         "You are an expert number-guessing game coach. "
@@ -200,8 +204,8 @@ def get_coach_hint(
     try:
         # Agentic loop — max 6 iterations to prevent runaway cost
         for _ in range(6):
-            response = _client.messages.create(
-                model="claude-opus-4-6",
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
                 max_tokens=1024,
                 system=system,
                 tools=TOOLS,
@@ -239,9 +243,16 @@ def get_coach_hint(
                 # pause_turn or unexpected — stop cleanly
                 break
 
+    except anthropic.BadRequestError as exc:
+        _logger.error("Coach API bad request: %s", exc)
+        msg = str(exc)
+        if "credit balance" in msg or "too low" in msg:
+            reasoning = "Coach unavailable — insufficient API credits. Add credits at console.anthropic.com."
+        else:
+            reasoning = f"Coach unavailable — bad request: {exc}"
     except anthropic.APIError as exc:
         _logger.error("Coach API error: %s", exc)
-        reasoning = "Coach unavailable — API error."
+        reasoning = f"Coach unavailable — API error ({type(exc).__name__})."
     except Exception as exc:
         _logger.error("Coach unexpected error: %s", exc)
         reasoning = "Coach unavailable."

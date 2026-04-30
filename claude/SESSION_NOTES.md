@@ -1,65 +1,75 @@
-# Session Notes — 2026-03-16 (Session 3)
+# Session Notes
+
+## Last Updated: 2026-04-30
+
+---
 
 ## What We Accomplished
 
-All UI modernization work completed and pushed to `feature/ui-modernization`.
+### Session 5 — arch-01 continuation
 
-### Changes This Session
+**Theme System**
+- 3 selectable themes: Cyberpunk Neon, Terminal, Synthwave
+- Full CSS parameterisation via `THEMES` dict — fonts, colors, gradients, chart palette, chip colors all theme-driven
+- `_hex_rgba()` helper converts hex theme colors to rgba backgrounds
+- JS `gvColor` uses injected theme constants
 
-| Area | Details |
-|------|---------|
-| **Layout** | 15%/85% top section: Score/Attempts/Time (left) + GV box + chart (right). Bottom: Guess form (left) + History (right) |
-| **Live timer** | JS `setInterval` ticks every second via `window.parent.document` — Time counter, GV box, and GV label in Vega SVG all update live |
-| **GV formula** | Smooth power curve `^1.2`, base 400, 100pt time bonus decaying over 2min. Generous through guess 4, gradual decay, ~40–70 pts at guess 7, 0 at last attempt |
-| **GV display fix** | Display used `attempts` (0-indexed), win used post-incremented `attempts` — fixed by passing `attempts + 1` to display so both are consistent |
-| **History chips** | Red = too low, Green = too high, Gold = win. Color legend always shown above chips |
-| **Show Hints checkbox** | On by default; toggling hides hint banner |
-| **New Game button** | Moved below Submit Guess in the play area |
-| **Range validation** | Out-of-range input rejected with error, no attempt consumed (replaces silent clamping) |
-| **Score = 0 on loss** | Explicitly zeroed on last attempt, absorbing integer-division remainder |
-| **Chart from guess 0** | Changed `len(hist) > 1` to `>= 1` so chart shows at game start |
-| **Submit button style** | Teal `#00b09b` → coral `#ff6348` gradient |
+**Leaderboard (`leaderboard.py`)**
+- Persistent `data/leaderboard.json` — one personal-best entry per username
+- `generate_random_name()` — adjective+noun combos (225 combinations)
+- `save_score()` — only saves if new personal best, returns bool
+- `get_leaderboard(limit=10)` — sorted descending by score
+- 8 unit tests, all passing
 
-### Branch
-`feature/ui-modernization` — pushed, PR opened to `main`
+**Settings / Sidebar**
+- Username: random default, editable once, locked permanently after first win
+- API key: password-masked input + collapsible "How to get an API key" help expander
+- Theme selectbox in sidebar
+
+**Leaderboard UI**
+- Game / Leaderboard tabs (`st.tabs`)
+- Top 10 table, current player's row marked with ▶
+- Personal best banner on win
+
+**AI Coach updates**
+- Per-call API key support (user-supplied key takes priority over env var)
+- Model downgraded `claude-opus-4-7` → `claude-sonnet-4-6` for cost savings
+- Billing errors now surface actionable message instead of generic "API error"
+
+**Bug Fixes**
+- `username_locked` AttributeError on startup — early session state init before sidebar
+- Difficulty switch kept stale secret from previous difficulty — detect change, clear game state
+
+**Docs & Submission**
+- `reflection.md` — all 5 questions completed
+- `architecture.mmd` — Mermaid diagram of full system
+- Loom walkthrough recorded and linked in README
+
+---
+
+## Files Targeted This Session
+
+| File | Change |
+|------|--------|
+| `app.py` | Themes, sidebar, tabs, leaderboard UI, win flow, difficulty reset fix |
+| `ai_coach.py` | Per-call API key, model downgrade, better error messages |
+| `leaderboard.py` | New — full persistence module |
+| `tests/test_leaderboard.py` | New — 8 tests |
+| `data/.gitkeep` | New |
+| `architecture.mmd` | New — Mermaid diagram |
+| `requirements.txt` | Added python-dotenv |
+| `reflection.md` | Completed all 5 questions |
+| `.gitignore` | Added data/leaderboard.json |
+| `docs/` | Design spec + implementation plan |
 
 ---
 
-## In Progress / Not Done
+## What's In Progress
 
-- **PRs from Session 1** — 9 older fix/refactor branches still have no PRs open to `main`
-- **UI-04** — No feedback when hint checkbox is unchecked (now partially addressed with Show Hints toggle)
-- **DEP-01** — `altair<5` missing lower bound in `requirements.txt`
-- **reflection.md** — Sections 2, 3, 4 still mostly blank
-
----
-
----
-
-## Session 3 — 2026-03-16
-
-### What We Accomplished
-
-Added two live annotation labels to the Altair score projection chart (`app.py`, +49 lines):
-
-| Change | Details |
-|--------|---------|
-| **GV label on Win ▲ tip** | `+{gv_now} GV` text mark in matching green/orange/red color |
-| **Live GV chart update via JS** | `tick()` now queries `.vega-embed svg text` nodes, finds the "GV" label, and rewrites content + fill color every second |
-| **Loss score label on Lose ▼ tip** | Red `{lose_score} pts` text mark below the lose projection endpoint |
-
-### Files Changed
-| File | +Lines | -Lines |
-|------|--------|--------|
-| `app.py` | 49 | 0 |
-
----
+- PR #1 open: `feature/arch-01` → `main`
+- Loom video linked in README
 
 ## Next Steps
 
-1. Commit this session's chart annotation changes
-2. Open PR `feature/ui-modernization` → `main`
-3. Open PRs for the 9 Session 1 branches → `main`
-4. Fill out `reflection.md` sections 2–4
-5. Fix DEP-01 in `requirements.txt`
-6. Final manual smoke test across all 3 difficulty modes
+- Merge PR #1 to complete assignment submission
+- Consider cloud persistence if app is hosted publicly

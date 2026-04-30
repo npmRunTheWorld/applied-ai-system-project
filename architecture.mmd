@@ -1,0 +1,40 @@
+graph TB
+    User(["Player"])
+
+    subgraph UI [app.py - Streamlit UI]
+        Sidebar["Sidebar\nDifficulty - Theme\nUsername - API Key"]
+        GameTab["Game Tab\nGuess Form - Score Chart\nGV Timer - History"]
+        CoachPanel["AI Coach Panel"]
+        BoardTab["Leaderboard Tab\nTop 10 - Current Player"]
+    end
+
+    subgraph Logic [logic_utils.py - Game Logic]
+        GL["get_range_for_difficulty\nparse_guess - check_guess\nupdate_score - guess_volatility"]
+    end
+
+    subgraph Coach [ai_coach.py - AI Coach]
+        CHint["get_coach_hint\nAgentic Tool-Use Loop"]
+        T1["1. narrow_range"]
+        T2["2. suggest_binary_search"]
+        T3["3. evaluate_strategy"]
+        CHint --> T1 --> T2 --> T3
+    end
+
+    subgraph LB [leaderboard.py - Persistence]
+        LBFn["generate_random_name\nload_leaderboard\nsave_score - get_leaderboard"]
+    end
+
+    subgraph Storage [Storage]
+        JSON[("data/leaderboard.json")]
+        Log[("logs/coach_log.jsonl")]
+    end
+
+    Claude(["Anthropic API\nclaude-sonnet-4-6"])
+
+    User --> UI
+    GameTab --> GL
+    GameTab --> LBFn
+    CoachPanel --> CHint
+    CHint <-->|"tool calls / responses"| Claude
+    CHint --> Log
+    LBFn <--> JSON

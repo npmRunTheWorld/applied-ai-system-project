@@ -135,6 +135,15 @@ attempt_limit_map = {"Easy": 6, "Normal": 8, "Hard": 5}
 attempt_limit = attempt_limit_map[difficulty]
 low, high = get_range_for_difficulty(difficulty)
 
+# Reset game state when difficulty changes
+if st.session_state.get("difficulty") != difficulty:
+    st.session_state.difficulty = difficulty
+    if "secret" in st.session_state:   # not first load
+        for _k in ["secret", "attempts", "score", "status", "history",
+                   "history_outcomes", "last_hint", "start_time",
+                   "score_delta", "score_history", "_coach_hint", "_new_personal_best"]:
+            st.session_state.pop(_k, None)
+
 _theme_names = {k: v["name"] for k, v in THEMES.items()}
 _selected_theme_name = st.sidebar.selectbox(
     "Theme",
